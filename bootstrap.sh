@@ -13,7 +13,7 @@ git_url=https://github.com/leif/tahoe-lafs
 git_branch=truckee
 deps_sha1="bfc0798f5f332ad5edb6d259391e4bb917283c17"
 depstgz=tahoe-deps.tar.gz
-depsurl=https://tahoe-lafs.org/source/tahoe-lafs/deps/$depstgz
+depsurl=https://www.tahoe-lafs.org/source/tahoe-lafs/deps/$depstgz
 
 if [ "$USERNAME" == "amnesia" ]; then
     web_port=7657 # BUG: using i2p's port in Tails because it is somehow
@@ -110,7 +110,7 @@ install_tahoe(){
     [ "$(dpkg -l|egrep 'ii  (build-essential|python-dev)'|wc -l)" == 2 ] || \
         sudo apt-get install build-essential python-dev
     [ -d tahoe-lafs ] || \
-    usewithtor git clone $git_url
+    git clone $git_url
     pushd tahoe-lafs
     git checkout $git_branch
     if [ ! -d tahoe-deps ]; then 
