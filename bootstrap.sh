@@ -23,13 +23,14 @@ else
 fi
 
 main() {
-    if [ "$1" == "" ]; then
-        echo "usage: $0 TARGET_DIR"
+    if [ "$#" -ne 2 ]; then
+        echo "usage: $0 [client|server] TARGET_DIR"
         echo
-        echo "TARGET_DIR is where Tahoe source and config will be installed."
-        echo "You will need ~200M free to build. If using Tails, it is"
-        echo "recommended to specify your Persistent directory or something"
-        echo "under it."
+        echo "TARGET_DIR is where two directories will be created: tahoe-lafs"
+        echo "(containing source souce code) and tahoe-client (containing your"
+        echo "configuration).You will need ~200M free to build. If using Tails,"
+        echo "it is recommended to specify your Persistent directory or"
+        echo "something under it."
         echo
         exit 1
     fi
@@ -38,9 +39,11 @@ main() {
     clear
     cat <<EOF
 This is a hacky (but hopefully idempotent) script that "securely" (relying on
-HTTPS) bootstraps a Truckee Tahoe-LAFS client node and connects it to a Tor
-Hidden Service-based grid. It has been tested on Tails 0.19 but should work on
-any recent debian system with tor and torsocks installed.
+HTTPS) bootstraps a Truckee Tahoe-LAFS client node (running the latest
+"$git_branch" brach from $git_url)
+and connects it to a Tor Hidden Service-based grid. It has been tested on Tails
+0.19 but should work on any recent debian system with tor and torsocks
+installed.
 
 Quickstart instructions for Tails users:
  1. Create a persistent volume (Applications->Tails->Configure persistent
@@ -78,27 +81,28 @@ EOF
     set -x
     [ "$(dpkg -l|egrep 'ii  (tor |torsocks)'|wc -l)" == 2 ] || \
         sudo apt-get install tor torsocks
-    boostrap_tahoe
+    install_tahoe
     create_client_node $(pwd)/tahoe-client $intro_furl $web_port
     usewithtor tahoe restart
     set +x
     wait_for_n_servers 5 $web_port
     echo "Creating 'tahoe:' alias"
     tahoe create-alias tahoe || true
-    echo Adding link to grid-news in your tahoe directory
-    tahoe ln $grid_news_read_cap grid-news 2>&1 | grep -v "Error: You can't overwrite a directory with a file" ||true
+    echo Adding Onion-Grid-News alias
+    tahoe add-alias Onion-Grid-News $grid_news_read_cap || true
     echo
-    echo "This is your 'tahoe:' write capability:"
-    tahoe list-aliases
+    echo "This is the write capability for your 'tahoe:' (default) directory:"
+    tahoe list-aliases|grep tahoe
     echo "(you might want to save that somewhere else)"
     echo
-    echo "You can view the grid-news page with 'tahoe webopen grid-news/Latest/index.html'"
+    echo "To access your tahoe directory in a browser, run this command:"
+    echo "      tahoe webopen tahoe:"
     echo
-    echo "Running 'tahoe webopen tahoe:' now. Welcome to The Onion Grid!"
-    tahoe webopen tahoe:
+    echo "To read the latest Onion Grid News, run this:"
+    echo "      tahoe webopen Onion-Grid-News:Latest/index.html"
 }
 
-boostrap_tahoe(){
+install_tahoe(){
     # this function is intended to idempotently and securely (relying on https)
     # install Tahoe from git. Everything will be contained within the
     # tahoe-lafs directory except for an optional symlink which is placed in
@@ -143,7 +147,7 @@ create_client_node() {
 'm/shares.happy/  && "shares.happy=5"  ||'\
 'm/shares.needed/ && "shares.needed=2" ||'\
 'm/shares.total/  && "shares.total=5"  ||'\
-'m/tub.location/  && "tub.location=lafs.client.fakelocation:1" '\
+'m/tub.location/  && "tub.location=client.fakelocation:1" '\
 '|| $_' "$client_dir/tahoe.cfg"
     fi
     ln -sf $(readlink -f $client_dir) ~/.tahoe
